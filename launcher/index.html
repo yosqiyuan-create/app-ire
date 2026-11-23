@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>アプリ入れ by Urushihara</title>
+<meta name="theme-color" content="#0f5c6e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="アプリ入れ">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* 上から順に使う一本道の道具。いちばん上に「zipを入れる」、その下に入れたアプリの一覧 */
+:root{
+ --bg:#f3f4f1;--card:#ffffff;--ink:#1c2226;--sub:#5e6a70;--line:#dde2de;
+ --main:#0f5c6e;--main-soft:#e2eef1;--ok:#1f7a4a;--warn:#b4690e;--ng:#b23a2e;--warn-soft:#fbf1e2;--ng-soft:#fbe9e7;
+ --font:"Hiragino Sans","Noto Sans JP","Noto Sans CJK JP","Yu Gothic",sans-serif;
+ color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --bg:#121719;--card:#1b2225;--ink:#e5eaeb;--sub:#9aa8ad;--line:#2d383c;--main:#5fb7c9;--main-soft:#1c3339;
+ --ok:#5cc28a;--warn:#e3a14f;--ng:#ec7a6c;--warn-soft:#33291b;--ng-soft:#3a2220;color-scheme:dark;}}
+:root[data-theme="dark"]{
+ --bg:#121719;--card:#1b2225;--ink:#e5eaeb;--sub:#9aa8ad;--line:#2d383c;--main:#5fb7c9;--main-soft:#1c3339;
+ --ok:#5cc28a;--warn:#e3a14f;--ng:#ec7a6c;--warn-soft:#33291b;--ng-soft:#3a2220;color-scheme:dark;}
+*{box-sizing:border-box;}
+[hidden]{display:none !important;}
+html,body{margin:0;}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.7;}
+header{padding:16px 18px 6px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+header h1{font-size:22px;margin:0;font-weight:800;}
+header .by{color:var(--sub);font-size:14px;}
+header .ver{font-size:12px;color:#fff;background:var(--main);border-radius:999px;padding:1px 8px;}
+main{max-width:720px;margin:0 auto;padding:6px 14px 48px;display:grid;gap:12px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;}
+.card h2{font-size:17px;margin:0 0 8px;}
+.pick{display:block;text-align:center;border:2px dashed var(--main);border-radius:14px;padding:22px 12px;background:var(--main-soft);color:var(--main);font-weight:800;font-size:19px;cursor:pointer;}
+.pick small{display:block;font-weight:400;font-size:13px;color:var(--sub);margin-top:4px;}
+.pick input{display:none;}
+.pick:focus-within{outline:2px solid var(--warn);outline-offset:2px;}
+label.f{display:grid;gap:4px;font-size:14px;color:var(--sub);margin:8px 0;}
+input[type=text]{font:inherit;font-size:17px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);width:100%;}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--warn);outline-offset:2px;}
+button,a.btn{font:inherit;font-weight:700;font-size:16px;border:0;border-radius:10px;padding:10px 16px;background:var(--main);color:#fff;cursor:pointer;text-decoration:none;display:inline-block;text-align:center;}
+button.sub,a.btn.sub{background:var(--main-soft);color:var(--main);}
+button.danger{background:var(--ng);color:#fff;}
+button:disabled{opacity:.5;}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.row > *{flex:1;}
+.box{border-radius:10px;padding:10px 12px;white-space:pre-wrap;font-size:15px;background:var(--main-soft);}
+.box.warn{background:var(--warn-soft);border-left:4px solid var(--warn);}
+.box.ng{background:var(--ng-soft);border-left:4px solid var(--ng);}
+.muted{color:var(--sub);font-size:13px;}
+.bar{height:10px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:8px;}
+.bar i{display:block;height:100%;width:0;background:var(--main);}
+ul.apps{list-style:none;margin:0;padding:0;}
+ul.apps li{display:grid;grid-template-columns:52px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);}
+ul.apps li:last-child{border-bottom:0;}
+ul.apps img{width:52px;height:52px;border-radius:12px;background:var(--line);object-fit:cover;}
+ul.apps .nm{font-weight:800;font-size:17px;line-height:1.4;}
+ul.apps .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+ul.apps .acts > *{padding:7px 12px;font-size:14px;}
+.confirm{margin-top:8px;}
+ol.steps{margin:0;padding-left:1.3em;}
+ol.steps li{margin:4px 0;}
+</style>
+</head>
+<body>
+<header><h1>アプリ入れ</h1><span class="by">by Urushihara</span><span class="ver" id="ver"></span></header>
+<main>
+ <div class="card" id="updCard" hidden><div class="box" id="updMsg"></div><div class="row"><button id="updBtn">最新版に切り替える</button></div></div>
+ <div class="card" id="swCard" hidden><div class="box ng" id="swMsg"></div></div>
+
+ <div class="card">
+  <h2>1. zipを入れる</h2>
+  <label class="pick">ここをタップしてzipを選ぶ<small>Claudeからダウンロードしたzip（「ダウンロード」フォルダにあります）</small>
+   <input type="file" id="fileInput" accept=".zip,application/zip">
+  </label>
+ </div>
+
+ <div class="card" id="checkCard" hidden>
+  <h2>2. 確認</h2>
+  <label class="f" for="appId">アプリ名（英数字）<input type="text" id="appId" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+  <div class="box" id="checkMsg"></div>
+  <p class="muted" id="checkFiles"></p>
+  <div class="row"><button id="installBtn">入れる</button><button class="sub" id="cancelBtn">やめる</button></div>
+ </div>
+
+ <div class="card" id="progCard" hidden>
+  <h2>入れています…</h2>
+  <div class="muted" id="progText"></div>
+  <div class="bar"><i id="progBar"></i></div>
+ </div>
+
+ <div class="card" id="doneCard" hidden>
+  <h2 id="doneTitle"></h2>
+  <div class="box" id="doneMsg"></div>
+  <div class="row" id="doneActs"></div>
+ </div>
+
+ <div class="card">
+  <h2>入れたアプリ</h2>
+  <ul class="apps" id="appList"><li class="muted" style="display:block">読み込み中…</li></ul>
+  <label class="f" for="keepSel" style="grid-template-columns:1fr auto;align-items:center">残しておく古い版の数（アプリごと）
+   <select id="keepSel" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"><option>1</option><option>3</option><option selected>5</option><option>10</option></select></label>
+  <p class="muted" id="storage"></p>
+ </div>
+
+ <div class="card">
+  <h2>使い方</h2>
+  <ol class="steps">
+   <li>Claudeのチャットで、アプリのzipをダウンロードします。</li>
+   <li>上の「ここをタップしてzipを選ぶ」から、「ダウンロード」フォルダのzipを選びます。新しい順に並べると、いちばん上に来ます。</li>
+   <li>確認画面で、名前と版番号（今の版 → 新しい版）を確かめて「入れる」を押します。</li>
+   <li>「開く」を押すとアプリが開きます。下に出る「ホーム画面に追加」を押すと、アプリのアイコンがホーム画面に付きます。</li>
+   <li>新しい版は、同じようにzipを入れるだけで上書きされます。「古い版に戻す」から、残してある古い版のどれにでも戻せます。</li>
+  </ol>
+  <p class="muted">入れたアプリは、このタブレットの中だけにあります。Wi-Fiがなくても開けます。Chromeで「サイトのデータを削除」をすると、入れたアプリも消えるので気をつけてください。</p>
+ </div>
+</main>
+
+<script src="db.js"></script>
+<script src="jszip.min.js"></script>
+<script>
+"use strict";
+const VERSION = "1.1";
+const $ = id => document.getElementById(id);
+const APPS_URL = new URL("../apps/", location.href).href;
+$("ver").textContent = "v" + VERSION;
+
+/* ---------- 共通 ---------- */
+const decode = u8 => { try { return new TextDecoder("utf-8").decode(u8); } catch (e) { return ""; } };
+function cmpVer(a, b){
+  const x = String(a).split(".").map(Number), y = String(b).split(".").map(Number);
+  for (let i = 0; i < Math.max(x.length, y.length); i++){ const d = (x[i] || 0) - (y[i] || 0); if (d) return d > 0 ? 1 : -1; }
+  return 0;
+}
+function baseName(s){
+  s = (s || "").replace(/\.[^.]+$/, "");
+  s = s.replace(/\s*[\(（]\d+[\)）]\s*$/, "");
+  s = s.replace(/[\s_-]*v\d+(?:[._]\d+)*\s*$/i, "");
+  s = s.replace(/[\s_-]+\d+(?:\.\d+)+\s*$/, "");
+  s = s.replace(/\s+\d+$/, "");
+  return s;
+}
+const toId = s => (s || "").replace(/\s+/g, "-").replace(/[^A-Za-z0-9._-]/g, "").replace(/^[-.]+|[-.]+$/g, "").slice(0, 80);
+function verFromHtml(h){
+  let m = h.match(/<meta[^>]*name\s*=\s*["']app-version["'][^>]*content\s*=\s*["']([0-9.]+)["']/i); if (m) return m[1];
+  m = h.match(/<title[^>]*>[^<]*?v(\d+(?:\.\d+)+)[^<]*<\/title>/i); if (m) return m[1];
+  m = h.match(/const\s+VERSION\s*=\s*["']([0-9.]+)["']/); if (m) return m[1];
+  m = h.match(/>\s*v(\d+(?:\.\d+)+)\s*</); if (m) return m[1];
+  return null;
+}
+function titleFromHtml(h){
+  const m = h.match(/<title[^>]*>([^<]*)<\/title>/i);
+  return m ? m[1].replace(/\s*v\d+(?:\.\d+)+\s*$/, "").trim() : "";
+}
+function fmtSize(n){ return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
+function today(){ const d = new Date(), p = n => String(n).padStart(2, "0"); return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()); }
+function show(id, on){ $(id).hidden = !on; }
+
+/* ---------- 古い版の記録 ---------- */
+function keepN(){ try { return parseInt(localStorage.getItem("appire_keep") || "5", 10) || 5; } catch (e) { return 5; } }
+function histOf(r){ return r ? (r.history || (r.prev ? [r.prev] : [])) : []; }   // 新しい順
+$("keepSel").value = String(keepN());
+$("keepSel").onchange = () => { try { localStorage.setItem("appire_keep", $("keepSel").value); } catch (e) {} };
+
+/* ---------- アイコン ---------- */
+async function iconPng(u8, size){
+  const bmp = await createImageBitmap(new Blob([u8]));
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  c.getContext("2d").drawImage(bmp, 0, 0, size, size);
+  return c;
+}
+function letterIcon(name, size){
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  const g = c.getContext("2d");
+  let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  g.fillStyle = "hsl(" + h + ",50%,36%)"; g.fillRect(0, 0, size, size);
+  g.fillStyle = "#fff"; g.font = "bold " + Math.round(size * 0.48) + "px sans-serif";
+  g.textAlign = "center"; g.textBaseline = "middle"; g.fillText([...name][0] || "A", size / 2, size * 0.54);
+  return c;
+}
+const canvasU8 = c => { const b = atob(c.toDataURL("image/png").split(",")[1]); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+function findIconPath(files, html){
+  const has = p => files.find(f => f.path === p);
+  const mf = files.find(f => /(^|\/)manifest\.(json|webmanifest)$/i.test(f.path) && !f.path.includes("/"));
+  if (mf){ try { const j = JSON.parse(decode(mf.data)); const ic = (j.icons || []).slice().sort((a, b) => parseInt(b.sizes) - parseInt(a.sizes))[0]; if (ic && has(ic.src.replace(/^\.?\//, ""))) return ic.src.replace(/^\.?\//, ""); } catch (e) {} }
+  const m = html && html.match(/<link[^>]*rel\s*=\s*["']?apple-touch-icon[^>]*href\s*=\s*["']([^"']+)["']/i) || html && html.match(/<link[^>]*href\s*=\s*["']([^"']+)["'][^>]*rel\s*=\s*["']?apple-touch-icon/i);
+  if (m && has(m[1].replace(/^\.?\//, ""))) return m[1].replace(/^\.?\//, "");
+  const any = files.find(f => /^icon[-_]?\d*\.png$/i.test(f.path)) || files.find(f => /\.png$/i.test(f.path) && /icon/i.test(f.path));
+  return any ? any.path : null;
+}
+
+/* ---------- zipを読む ---------- */
+let pending = null;   // {files, info, fileName}
+$("fileInput").onchange = async ev => {
+  const file = (ev.target.files || [])[0]; ev.target.value = "";
+  if (!file) return;
+  show("doneCard", false); show("checkCard", false);
+  let files = [];
+  try {
+    const zip = await JSZip.loadAsync(file);
+    const list = []; zip.forEach((p, f) => { if (!f.dir) list.push([p, f]); });
+    for (const [p, f] of list){
+      const name = p.split("/").pop();
+      if (p.startsWith("__MACOSX/") || name === ".DS_Store" || name.startsWith("._") || name === "Thumbs.db") continue;
+      files.push({path: p, data: await f.async("uint8array")});
+    }
+    const tops = new Set(files.map(f => f.path.split("/")[0]));
+    if (tops.size === 1 && files.every(f => f.path.includes("/"))){ const t = [...tops][0] + "/"; files.forEach(f => f.path = f.path.slice(t.length)); }
+  } catch (e) { done(false, "zipを読めませんでした。", "ファイルが壊れていないか、zipかどうかを確かめてください。"); return; }
+  if (!files.length){ done(false, "zipが空でした。", "中にファイルが入っていません。"); return; }
+  const root = files.filter(f => !f.path.includes("/") && /\.html?$/i.test(f.path));
+  const main = root.find(f => /^index\.html?$/i.test(f.path)) || (root.length === 1 ? root[0] : null);
+  if (!main){ done(false, "入れられないzipです。", "Webアプリの入口（index.html）が見つかりませんでした。\nこのアプリ入れは、今のところWebアプリだけを入れられます。"); return; }
+  const info = {id: "", name: "", version: null, main: main.path};
+  const vj = files.find(f => f.path === "version.json");
+  if (vj){ try { const j = JSON.parse(decode(vj.data)); info.id = toId(j.id || ""); info.name = j.name || ""; info.version = j.version ? String(j.version).replace(/^v/i, "") : null; } catch (e) {} }
+  const html = decode(main.data);
+  if (!info.version) info.version = verFromHtml(html);
+  if (!info.name) info.name = titleFromHtml(html) || baseName(file.name);
+  let how = "";
+  if (info.id) how = "zipの中の目印（version.json）から決めました。";
+  else {
+    const apps = await APPIRE_DB.allApps().catch(() => []);
+    const same = apps.find(a => a.name === info.name);
+    const b = toId(baseName(file.name));
+    if (b){ info.id = b; how = b !== toId(file.name.replace(/\.zip$/i, "")) ? "ファイル名の版番号・番号を外して決めました。" : "ファイル名から決めました。"; }
+    else if (same){ info.id = same.id; how = "同じ名前のアプリが入っていたので、それに合わせました。"; }
+  }
+  info.iconPath = findIconPath(files, html);
+  pending = {files, info, fileName: file.name, how};
+  $("appId").value = info.id;
+  const total = files.reduce((a, f) => a + f.data.length, 0);
+  $("checkFiles").textContent = files.length + " 個のファイル（合計 " + fmtSize(total) + "）　ファイル名：" + file.name;
+  await renderCheck();
+  show("checkCard", true); $("checkCard").scrollIntoView({behavior: "smooth"});
+};
+$("appId").addEventListener("input", () => { if (pending){ pending.info.id = toId($("appId").value); pending.how = "手で入れた名前を使います。"; renderCheck(); } });
+
+async function renderCheck(){
+  const i = pending.info, box = $("checkMsg");
+  box.className = "box";
+  if (!i.id){ box.className = "box warn"; box.textContent = "アプリ名を英数字で入れてください（例：sedori-jigyou-keikaku）。\nファイル名が日本語のため、自動で決められませんでした。"; $("installBtn").disabled = true; return; }
+  $("installBtn").disabled = false;
+  const cur = await APPIRE_DB.getApp(i.id).catch(() => null);
+  const nv = i.version ? "v" + i.version : "版番号なし";
+  let t = "名前：" + i.name + "\n";
+  let level = "";
+  if (!cur){ t += "新しく入れます。　版：" + nv; $("installBtn").textContent = "入れる"; }
+  else {
+    t += "上書きします。\n今の版：" + (cur.cur.version ? "v" + cur.cur.version : "不明") + "　→　新しい版：" + nv;
+    $("installBtn").textContent = "上書きする";
+    if (cur.cur.version && i.version){
+      const c = cmpVer(i.version, cur.cur.version);
+      if (c < 0){ t += "\n⚠ 今より古い版です。本当に上書きしてよいか確かめてください。"; level = "ng"; }
+      else if (c === 0) t += "\n（同じ版です。入れ直しになります）";
+    }
+    if (cur.name && i.name && cur.name !== i.name){ t += "\n⚠ アプリの名前が違います。\n今：「" + cur.name + "」\n新：「" + i.name + "」\n別のアプリと取り違えていないか確かめてください。"; level = "ng"; }
+  }
+  if (pending.how) t += "\n（" + (pending.how.startsWith("手で") ? pending.how.replace(/。$/, "") : "アプリ名は" + pending.how.replace(/。$/, "")) + "）";
+  box.className = "box" + (level ? " " + level : "");
+  box.textContent = t;
+}
+$("cancelBtn").onclick = () => { pending = null; show("checkCard", false); };
+
+/* ---------- 入れる ---------- */
+$("installBtn").onclick = async () => {
+  if (!pending || !pending.info.id) return;
+  const {files, info} = pending;
+  $("installBtn").disabled = true; show("checkCard", false); show("progCard", true);
+  const prog = (t, r) => { $("progText").textContent = t; $("progBar").style.width = Math.round(r * 100) + "%"; };
+  try {
+    prog("アイコンを準備しています…", 0.05);
+    let c192, c512, iconUrl;
+    const src = info.iconPath && files.find(f => f.path === info.iconPath);
+    try { if (src){ c192 = await iconPng(src.data, 192); c512 = await iconPng(src.data, 512); } } catch (e) { c192 = null; }
+    if (!c192){ c192 = letterIcon(info.name || info.id, 192); c512 = letterIcon(info.name || info.id, 512); }
+    const small = document.createElement("canvas"); small.width = small.height = 96; small.getContext("2d").drawImage(c192, 0, 0, 96, 96);
+    iconUrl = small.toDataURL("image/png");
+    const all = files.concat([{path: "__appire_icon.png", data: canvasU8(c192)}, {path: "__appire_icon512.png", data: canvasU8(c512)}]);
+
+    prog("今の状態を確かめています…", 0.1);
+    const old = await APPIRE_DB.getApp(info.id);
+    const build = Date.now().toString(36);
+    const size = files.reduce((a, f) => a + f.data.length, 0);
+    const rec = {id: info.id, name: info.name, icon: iconUrl,
+      cur: {version: info.version, build, date: today(), main: info.main, count: files.length, size},
+      history: []};
+    const hist = old ? [old.cur].concat(histOf(old)) : [];
+    rec.history = hist.slice(0, keepN());
+    const drop = hist.slice(keepN());
+
+    prog("保存しています…", 0.2);
+    await APPIRE_DB.tx(["apps", "files"], "readwrite", t => {
+      const fs = t.objectStore("files");
+      all.forEach(f => fs.put(f.data.buffer.slice(f.data.byteOffset, f.data.byteOffset + f.data.byteLength), APPIRE_DB.fileKey(info.id, build, f.path)));
+      drop.forEach(h => { const p = info.id + "@" + h.build + "/"; fs.delete(IDBKeyRange.bound(p, p + "\uffff")); });
+      t.objectStore("apps").put(rec);
+    });
+    prog("完了", 1);
+    try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
+    const url = APPS_URL + encodeURIComponent(info.id) + "/";
+    done(true, (old ? "上書きしました" : "入れました") + "：" + info.name,
+      (old ? "v" + (old.cur.version || "?") + " → " : "") + "v" + (info.version || "?") + "\n「開く」を押すとアプリが開きます。下に出る「ホーム画面に追加」で、ホーム画面にアイコンが付きます。\n（一度ホーム画面に追加したアプリは、上書きしても追加し直す必要はありません）\n古い版は " + keepN() + " つまで残るので、「古い版に戻す」でいつでも戻せます。\n\n入れ終わったzip（" + pending.fileName + "）は、「ダウンロード」フォルダから消しておくと、次に選ぶときに迷いません。",
+      url);
+    pending = null;
+    renderList();
+  } catch (e) {
+    done(false, "入れられませんでした。", "保存に失敗しました。タブレットの空き容量を確かめて、もう一度お試しください。\n（" + (e && e.message || e) + "）");
+  } finally { show("progCard", false); $("installBtn").disabled = false; }
+};
+
+function done(ok, title, msg, url){
+  $("doneTitle").textContent = (ok ? "✓ " : "✕ ") + title;
+  $("doneMsg").className = "box" + (ok ? "" : " ng");
+  $("doneMsg").textContent = msg;
+  const a = $("doneActs"); a.innerHTML = "";
+  if (url){ const o = document.createElement("a"); o.className = "btn"; o.href = url; o.target = "_blank"; o.rel = "noopener"; o.textContent = "開く"; a.append(o); }
+  show("doneCard", true); $("doneCard").scrollIntoView({behavior: "smooth"});
+}
+
+/* ---------- 一覧 ---------- */
+async function renderList(){
+  const ul = $("appList");
+  let apps = [];
+  try { apps = await APPIRE_DB.allApps(); } catch (e) { ul.innerHTML = '<li class="muted" style="display:block">保存場所を読めませんでした。</li>'; return; }
+  apps.sort((a, b) => (b.cur.date || "").localeCompare(a.cur.date || ""));
+  ul.innerHTML = "";
+  if (!apps.length){ ul.innerHTML = '<li class="muted" style="display:block">まだありません。上の「zipを入れる」から入れてください。</li>'; }
+  apps.forEach(a => {
+    const li = document.createElement("li");
+    const img = document.createElement("img"); img.src = a.icon || ""; img.alt = "";
+    const body = document.createElement("div");
+    const nm = document.createElement("div"); nm.className = "nm"; nm.textContent = a.name;
+    const meta = document.createElement("div"); meta.className = "muted";
+    const hs = histOf(a);
+    meta.textContent = (a.cur.version ? "v" + a.cur.version : "版番号なし") + "　" + a.cur.date + "　" + a.id + (hs.length ? "　（古い版 " + hs.length + " つ）" : "");
+    const acts = document.createElement("div"); acts.className = "acts";
+    const open = document.createElement("a"); open.className = "btn"; open.textContent = "開く"; open.href = APPS_URL + encodeURIComponent(a.id) + "/"; open.target = "_blank"; open.rel = "noopener";
+    acts.append(open);
+    if (hs.length){ const rb = document.createElement("button"); rb.className = "sub"; rb.textContent = "古い版に戻す"; rb.onclick = () => pickOld(body, a); acts.append(rb); }
+    const del = document.createElement("button"); del.className = "sub"; del.textContent = "削除";
+    del.onclick = () => ask(body, "「" + a.name + "」を削除します。古い版も全部消えます。\nホーム画面のアイコンは、自分で長押しして削除してください。", "削除する", "danger", async () => {
+      await APPIRE_DB.tx(["apps", "files"], "readwrite", x => { x.objectStore("apps").delete(a.id); const p = a.id + "@"; x.objectStore("files").delete(IDBKeyRange.bound(p, p + "￿")); });
+      renderList(); });
+    acts.append(del);
+    body.append(nm, meta, acts);
+    li.append(img, body); ul.append(li);
+  });
+  try { if (navigator.storage && navigator.storage.estimate){ const e = await navigator.storage.estimate(); $("storage").textContent = "使っている容量：約 " + fmtSize(e.usage || 0); } } catch (e) {}
+}
+function pickOld(parent, a){
+  parent.querySelector(".confirm")?.remove();
+  const box = document.createElement("div"); box.className = "confirm";
+  const t = document.createElement("div"); t.className = "box";
+  t.textContent = "戻したい版を選んでください。今の版 v" + (a.cur.version || "?") + " は、古い版として残ります。";
+  box.append(t);
+  histOf(a).forEach((h, i) => {
+    const row = document.createElement("div"); row.className = "row"; row.style.alignItems = "center";
+    const lb = document.createElement("span"); lb.textContent = "v" + (h.version || "?") + "　" + (h.date || ""); lb.style.flex = "2";
+    const b = document.createElement("button"); b.className = "sub"; b.textContent = "この版に戻す";
+    b.onclick = async () => {
+      b.disabled = true;
+      try {
+        const r = await APPIRE_DB.getApp(a.id); const hist = histOf(r);
+        const chosen = hist[i]; const rest = hist.filter((_, k) => k !== i);
+        r.history = [r.cur].concat(rest); r.cur = chosen; delete r.prev;
+        await APPIRE_DB.tx(["apps"], "readwrite", x => { x.objectStore("apps").put(r); });
+        renderList();
+      } catch (e) { t.textContent = "うまくいきませんでした。もう一度お試しください。"; b.disabled = false; }
+    };
+    row.append(lb, b); box.append(row);
+  });
+  const row = document.createElement("div"); row.className = "row";
+  const n = document.createElement("button"); n.className = "sub"; n.textContent = "閉じる"; n.onclick = () => box.remove();
+  row.append(n); box.append(row); parent.append(box);
+}
+function ask(parent, msg, okLabel, cls, fn){
+  parent.querySelector(".confirm")?.remove();
+  const box = document.createElement("div"); box.className = "confirm";
+  const t = document.createElement("div"); t.className = "box" + (cls === "danger" ? " ng" : ""); t.textContent = msg;
+  const row = document.createElement("div"); row.className = "row";
+  const y = document.createElement("button"); y.className = cls; y.textContent = okLabel;
+  const n = document.createElement("button"); n.className = "sub"; n.textContent = "やめる";
+  n.onclick = () => box.remove();
+  y.onclick = async () => { y.disabled = n.disabled = true; try { await fn(); } catch (e) { t.textContent = "うまくいきませんでした。もう一度お試しください。"; y.disabled = n.disabled = false; } };
+  row.append(y, n); box.append(t, row); parent.append(box);
+}
+
+/* ---------- オフライン動作の準備と更新の確認 ---------- */
+async function setupSW(){
+  if (!("serviceWorker" in navigator)){ $("swMsg").textContent = "このブラウザでは使えません。AndroidのChromeで開いてください。"; show("swCard", true); return null; }
+  if (location.protocol !== "https:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1"){
+    $("swMsg").textContent = "このページは、GitHubに置いた（https:// で始まる）アドレスで開いてください。"; show("swCard", true); return null; }
+  try { return await navigator.serviceWorker.register("../sw.js", {scope: "../"}); }
+  catch (e) { $("swMsg").textContent = "準備に失敗しました。ネットにつないで開き直してください。"; show("swCard", true); return null; }
+}
+async function checkUpdate(reg){
+  try {
+    const r = await fetch("version.json?t=" + Date.now(), {cache: "no-store"});
+    const j = await r.json();
+    if (j.version && cmpVer(j.version, VERSION) > 0){
+      $("updMsg").textContent = "新しいバージョン v" + j.version + " があります（今は v" + VERSION + "）。";
+      show("updCard", true);
+      $("updBtn").onclick = async () => { try { if (reg) await reg.update(); } catch (e) {} location.reload(); };
+    }
+  } catch (e) {}
+}
+(async () => { const reg = await setupSW(); renderList(); if (navigator.onLine) checkUpdate(reg); })();
+</script>
+</body>
+</html>
